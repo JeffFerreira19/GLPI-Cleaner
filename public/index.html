@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Limpeza N1 — Zabbix × GLPI</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">⟳</span>
+      <div>
+        <h1>Limpeza N1 — Zabbix × GLPI</h1>
+        <small>Chamados do grupo técnico Nível 1 com eventos recuperados sem intervenção humana</small>
+      </div>
+    </div>
+    <div class="status-pills">
+      <span id="pill-group" class="pill">Grupo —</span>
+      <span id="pill-mode" class="pill">—</span>
+      <span id="pill-auto" class="pill">—</span>
+      <span id="pill-zbx" class="pill" title="Zabbix">Zabbix —</span>
+      <span id="pill-glpi" class="pill" title="GLPI">GLPI —</span>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="candidates">Candidatos</button>
+    <button class="tab" data-tab="audit">Auditoria</button>
+  </nav>
+
+  <section id="tab-candidates" class="tab-panel active">
+    <div class="cards">
+      <button class="card c-total" data-filter="">
+        <span class="card-label">Avaliados</span><span class="card-value" id="cnt-total">—</span>
+      </button>
+      <button class="card c-eligible" data-filter="ELIGIBLE">
+        <span class="card-label">Elegíveis</span><span class="card-value" id="cnt-ELIGIBLE">—</span>
+      </button>
+      <button class="card c-blocked" data-filter="BLOCKED">
+        <span class="card-label">Bloqueados</span><span class="card-value" id="cnt-BLOCKED">—</span>
+      </button>
+      <button class="card c-waiting" data-filter="WAITING">
+        <span class="card-label">Aguardando</span><span class="card-value" id="cnt-WAITING">—</span>
+      </button>
+      <button class="card c-review" data-filter="MANUAL_REVIEW">
+        <span class="card-label">Revisão manual</span><span class="card-value" id="cnt-MANUAL_REVIEW">—</span>
+      </button>
+      <button class="card c-error" data-filter="ERROR">
+        <span class="card-label">Erros</span><span class="card-value" id="cnt-ERROR">—</span>
+      </button>
+    </div>
+
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Buscar por chamado, host, trigger ou evento..." />
+      <select id="filter-result">
+        <option value="">Todos os resultados</option>
+        <option value="ELIGIBLE">Elegíveis</option>
+        <option value="BLOCKED">Bloqueados</option>
+        <option value="WAITING">Aguardando</option>
+        <option value="MANUAL_REVIEW">Revisão manual</option>
+        <option value="ERROR">Erros</option>
+      </select>
+      <select id="filter-reason"><option value="">Todos os motivos</option></select>
+      <label class="chk"><input type="checkbox" id="auto-refresh" /> Atualizar a cada 60s</label>
+      <span class="spacer"></span>
+      <button id="btn-refresh" class="btn">Atualizar</button>
+      <button id="btn-preview" class="btn btn-secondary">Simular execução</button>
+      <button id="btn-execute" class="btn btn-danger">Enviar elegíveis à lixeira</button>
+    </div>
+
+    <div class="meta" id="meta">Carregando...</div>
+
+    <div class="table-wrap">
+      <table id="tbl-candidates">
+        <thead>
+          <tr>
+            <th data-sort="ticketId">Chamado</th>
+            <th data-sort="host">Host</th>
+            <th data-sort="trigger">Evento</th>
+            <th data-sort="problemClock">Problema</th>
+            <th data-sort="recoveredMinutesAgo">Recuperado há</th>
+            <th>Reconhecido</th>
+            <th>Interações</th>
+            <th data-sort="correlationMethod">Vínculo</th>
+            <th data-sort="result">Resultado</th>
+            <th>Motivo</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="empty" id="empty-candidates" hidden>Nenhum chamado para os filtros selecionados.</div>
+    </div>
+  </section>
+
+  <section id="tab-audit" class="tab-panel">
+    <div class="toolbar">
+      <select id="audit-action">
+        <option value="">Todas as ações</option>
+        <option value="TRASHED">Enviados à lixeira</option>
+        <option value="DRY_RUN">Simulados</option>
+        <option value="SKIPPED">Ignorados</option>
+        <option value="FAILED">Falhas</option>
+      </select>
+      <input id="audit-ticket" type="number" placeholder="Nº do chamado" />
+      <select id="audit-limit">
+        <option value="100">100 registros</option>
+        <option value="300" selected>300 registros</option>
+        <option value="1000">1000 registros</option>
+      </select>
+      <span class="spacer"></span>
+      <button id="btn-audit" class="btn">Atualizar</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tbl-audit">
+        <thead>
+          <tr>
+            <th>Data/hora</th><th>Ação</th><th>Chamado</th><th>Evento</th>
+            <th>Decisão</th><th>Motivo</th><th>Modo</th><th>Execução</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="empty" id="empty-audit" hidden>Nenhum registro de auditoria.</div>
+    </div>
+  </section>
+
+  <dialog id="modal-detail">
+    <div class="modal-head">
+      <h2 id="detail-title">Chamado</h2>
+      <button class="icon-btn" data-close>✕</button>
+    </div>
+    <div id="detail-body" class="modal-body"></div>
+    <div class="modal-foot">
+      <button id="btn-reevaluate" class="btn btn-secondary">Reavaliar agora</button>
+      <button id="btn-trash-one" class="btn btn-danger">Enviar à lixeira</button>
+    </div>
+  </dialog>
+
+  <dialog id="modal-key">
+    <form method="dialog" id="form-key">
+      <div class="modal-head"><h2>Confirmar ação</h2></div>
+      <div class="modal-body">
+        <p id="key-message"></p>
+        <label>Chave da API (X-API-Key)
+          <input id="input-key" type="password" autocomplete="off" required />
+        </label>
+        <label class="chk"><input type="checkbox" id="remember-key" /> Lembrar nesta sessão do navegador</label>
+      </div>
+      <div class="modal-foot">
+        <button value="cancel" formnovalidate class="btn btn-secondary">Cancelar</button>
+        <button value="ok" class="btn btn-danger">Confirmar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
